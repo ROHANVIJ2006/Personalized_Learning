@@ -1,0 +1,21 @@
+# Node
+node_modules/
+.vite/
+dist/
+
+# Python
+**/__pycache__/
+*.pyc
+venv/
+.env
+.ipynb_checkpoints/
+
+# IDEs
+.idea/
+.vscode/
+
+# Project Specific
+backend/ai_models/trained/*.pt
+backend/datasets/*.csv
+frontend/.env*
+!frontend/.env.example

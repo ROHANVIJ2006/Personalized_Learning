@@ -30,18 +30,25 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+from fastapi import FastAPI, Request
+import time
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        settings.FRONTEND_URL.rstrip("/"),
-        "http://localhost:5173",
-        "http://localhost:5174",
-        "http://localhost:3000"
-    ],
+    allow_origins=["*"],  # Temporarily permissive to bypass CORS issues
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.middleware("http")
+async def log_requests(request: Request, call_next):
+    start_time = time.time()
+    response = await call_next(request)
+    process_time = (time.time() - start_time) * 1000
+    formatted_process_time = "{0:.2f}".format(process_time)
+    logger.info(f"RID: {request.method} {request.url.path} - {response.status_code} ({formatted_process_time}ms)")
+    return response
 
 app.include_router(auth.router,            prefix="/api/auth",           tags=["Authentication"])
 app.include_router(users.router,           prefix="/api/users",          tags=["Users"])

@@ -30,15 +30,23 @@ def register(data: UserRegister, db: Session = Depends(get_db)):
 
 @router.post("/login", response_model=Token)
 def login(data: UserLogin, db: Session = Depends(get_db)):
-    try:
-        user = db.query(User).filter(User.email == data.email).first()
-        if not user or not verify_password(data.password, user.hashed_password):
-            raise HTTPException(status_code=401, detail="Invalid email or password")
-        token = create_access_token({"sub": str(user.id)})
-        return {"access_token": token, "token_type": "bearer", "user": user}
-    except HTTPException:
-        raise
-    except Exception as e:
-        import traceback
-        trace = traceback.format_exc()
-        raise HTTPException(status_code=500, detail=f"Server Error: {str(e)}\n\n{trace}")
+    user = db.query(User).filter(User.email == data.email).first()
+    if not user or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Invalid email or password")
+    token = create_access_token({"sub": str(user.id)})
+    return {"access_token": token, "token_type": "bearer", "user": user}
+
+
+from pydantic import BaseModel, EmailStr
+
+class ForgotPasswordRequest(BaseModel):
+    email: str
+
+@router.post("/forgot-password")
+def forgot_password(data: ForgotPasswordRequest, db: Session = Depends(get_db)):
+    """Always returns success to avoid email enumeration attacks.
+    In production, send a real reset email via SMTP."""
+    # Look up user silently — do not reveal if email exists
+    _user = db.query(User).filter(User.email == data.email).first()
+    return {"message": "If that email is registered, you'll receive reset instructions shortly."}
+

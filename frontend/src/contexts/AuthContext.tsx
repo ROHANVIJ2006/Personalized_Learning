@@ -17,6 +17,8 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (data: any) => Promise<void>;
   logout: () => void;
+  updateUser: (updates: Partial<User>) => void;
+  refreshUser: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | null>(null);
@@ -25,12 +27,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
 
+  const fetchUser = async () => {
+    try {
+      const me = await api.getMe();
+      setUser(me);
+    } catch {
+      clearToken();
+    }
+  };
+
   useEffect(() => {
     if (isAuthenticated()) {
-      api.getMe()
-        .then(setUser)
-        .catch(() => clearToken())
-        .finally(() => setLoading(false));
+      fetchUser().finally(() => setLoading(false));
     } else {
       setLoading(false);
     }
@@ -53,8 +61,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null);
   };
 
+  // Instantly update the local user state (for Settings page)
+  const updateUser = (updates: Partial<User>) => {
+    setUser(prev => prev ? { ...prev, ...updates } : prev);
+  };
+
+  // Re-fetch from server (e.g. after profile changes)
+  const refreshUser = async () => {
+    if (isAuthenticated()) {
+      await fetchUser();
+    }
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, register, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, register, logout, updateUser, refreshUser }}>
       {children}
     </AuthContext.Provider>
   );

@@ -66,6 +66,10 @@ export const api = {
   // Chatbot
   chat: (message: string, conversation_history: any[] = []) =>
     request<any>('/chatbot', { method: 'POST', body: JSON.stringify({ message, conversation_history }) }),
+
+  // Auth extras
+  forgotPassword: (email: string) =>
+    request<any>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
 };
 
 export function saveToken(token: string) {

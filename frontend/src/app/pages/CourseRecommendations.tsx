@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
+import { motion, AnimatePresence } from 'motion/react';
 import { Sparkles, Star, Clock, ExternalLink, Filter, CheckCircle, Users, Award, GraduationCap } from 'lucide-react';
 import { api } from '../../lib/api';
 
@@ -8,18 +8,33 @@ export function CourseRecommendations() {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<'all' | 'free' | 'govt'>('all');
   const [enrolling, setEnrolling] = useState<number | null>(null);
+  const [enrolled, setEnrolled] = useState<Set<number>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     api.getRecommendations().then(setData).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const enroll = async (courseId: number, url?: string) => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const enroll = async (courseId: number, courseTitle: string, url?: string) => {
     setEnrolling(courseId);
     try {
       await api.enrollCourse(courseId);
+      setEnrolled(prev => new Set(prev).add(courseId));
+      showToast(`Enrolled in "${courseTitle}" ✓`, 'success');
       if (url) window.open(url, '_blank');
     } catch (e: any) {
-      if (e.message?.includes('Already enrolled') && url) window.open(url, '_blank');
+      if (e.message?.includes('Already enrolled')) {
+        setEnrolled(prev => new Set(prev).add(courseId));
+        showToast(`Already enrolled in "${courseTitle}"`, 'success');
+        if (url) window.open(url, '_blank');
+      } else {
+        showToast(e.message || 'Enrollment failed. Try again.', 'error');
+      }
     } finally {
       setEnrolling(null);
     }
@@ -47,7 +62,24 @@ export function CourseRecommendations() {
   });
 
   return (
-    <div className="px-8 py-5 max-w-[1400px] mx-auto h-[calc(100vh-80px)] overflow-y-auto">
+    <div className="px-8 py-5 max-w-[1400px] mx-auto h-[calc(100vh-80px)] overflow-y-auto relative">
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center gap-2 ${
+              toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}
+          >
+            <CheckCircle size={16} />
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
       {/* AI Insight Banner */}
       {aiInsight.message && (
         <motion.div
@@ -171,12 +203,15 @@ export function CourseRecommendations() {
             )}
 
             <button
-              onClick={() => enroll(course.id, course.url)}
+              onClick={() => enroll(course.id, course.title, course.url)}
               disabled={enrolling === course.id}
-              className="w-full py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2"
+              className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                enrolled.has(course.id)
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50'
+              }`}
             >
-              {enrolling === course.id ? 'Enrolling...' : 'Enroll & Open'}
-              <ExternalLink size={14} />
+              {enrolling === course.id ? 'Enrolling...' : enrolled.has(course.id) ? <><CheckCircle size={14} /> Enrolled!</> : <>Enroll & Open <ExternalLink size={14} /></>}
             </button>
           </motion.div>
         ))}

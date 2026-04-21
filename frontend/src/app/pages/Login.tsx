@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { motion } from 'motion/react';
 import { useAuth } from '../../contexts/AuthContext';
+import { isAuthenticated } from '../../lib/api';
 
 export function Login() {
   const { login } = useAuth();
@@ -10,6 +11,11 @@ export function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+
+  // Auto-redirect if already logged in
+  useEffect(() => {
+    if (isAuthenticated()) navigate('/dashboard', { replace: true });
+  }, [navigate]);
 
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();

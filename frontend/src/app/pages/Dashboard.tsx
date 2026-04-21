@@ -36,6 +36,7 @@ export function Dashboard() {
   const overallProgress = data?.overall_progress || 0;
   const streakDays = data?.streak_days || 0;
   const totalXp = data?.user?.total_xp || 0;
+  const aiRecommendation = data?.ai_recommendation || null;
 
   return (
     <div className="px-8 py-3 space-y-3 max-w-[1400px] mx-auto h-[calc(100vh-80px)] overflow-y-auto">
@@ -160,6 +161,32 @@ export function Dashboard() {
           )}
         </motion.div>
       </div>
+
+      {/* AI Recommendation Nudge */}
+      {aiRecommendation && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.4, delay: 0.25 }}
+          className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-xl p-4 border border-indigo-100 flex items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 bg-indigo-600 rounded-lg flex items-center justify-center flex-shrink-0">
+              <Sparkles size={18} className="text-white" />
+            </div>
+            <div>
+              <p className="text-xs font-bold text-indigo-500 uppercase tracking-wide mb-0.5">AI Recommendation</p>
+              <p className="text-sm font-semibold text-gray-800">{aiRecommendation.message}</p>
+            </div>
+          </div>
+          <Link
+            to={aiRecommendation.action_url}
+            className="flex-shrink-0 px-4 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors whitespace-nowrap flex items-center gap-1"
+          >
+            {aiRecommendation.action} <ArrowRight size={13} />
+          </Link>
+        </motion.div>
+      )}
 
       {/* Recent Courses or CTA */}
       <motion.div

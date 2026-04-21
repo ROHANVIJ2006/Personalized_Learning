@@ -1,7 +1,8 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from contextlib import asynccontextmanager
 import logging
+import time
 
 from app.core.config import settings
 from app.core.database import engine, Base
@@ -30,8 +31,7 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
-from fastapi import FastAPI, Request
-import time
+
 
 app.add_middleware(
     CORSMiddleware,

@@ -82,6 +82,24 @@ def get_dashboard(
         if e.course
     ]
 
+    # AI recommendation nudge based on user's weakest skill
+    ai_recommendation = None
+    if skill_data:
+        weakest = min(skill_data, key=lambda s: s["proficiency"])
+        ai_recommendation = {
+            "message": f"Focus on {weakest['skill_name']} to accelerate your {current_user.career_goal or 'learning'} journey.",
+            "skill": weakest["skill_name"],
+            "action": "Take Assessment",
+            "action_url": "/dashboard/assessment",
+        }
+    elif not profiles:
+        ai_recommendation = {
+            "message": f"Start your first skill assessment to unlock your personalized {current_user.career_goal or 'learning'} roadmap.",
+            "skill": None,
+            "action": "Take Assessment",
+            "action_url": "/dashboard/assessment",
+        }
+
     return {
         "user": {
             "id": current_user.id,
@@ -95,6 +113,7 @@ def get_dashboard(
         "weekly_hours": weekly,
         "skill_profiles": skill_data,
         "recent_courses": recent_courses,
+        "ai_recommendation": ai_recommendation,
     }
 
 

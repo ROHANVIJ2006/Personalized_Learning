@@ -1,16 +1,28 @@
 import { motion } from 'motion/react';
-import { Mail, ArrowLeft, Shield, Sparkles, CheckCircle } from 'lucide-react';
+import { Mail, ArrowLeft, Shield, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
 import { useState } from 'react';
 import { Link } from 'react-router';
+import { api } from '../../lib/api';
 
 export function ForgotPassword() {
   const [email, setEmail] = useState('');
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Simulate sending reset email
-    setIsSubmitted(true);
+    setError('');
+    setLoading(true);
+    try {
+      await (api as any).forgotPassword(email);
+      setIsSubmitted(true);
+    } catch {
+      // Show success anyway to avoid email enumeration — but surface network errors
+      setError('Could not contact the server. Please try again later.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -82,12 +94,20 @@ export function ForgotPassword() {
                   </div>
                 </div>
 
+                {error && (
+                  <div className="flex items-center gap-2 text-red-600 text-sm bg-red-50 border border-red-200 rounded-lg px-4 py-3">
+                    <AlertCircle size={16} />
+                    {error}
+                  </div>
+                )}
+
                 <button
                   type="submit"
-                  className="w-full py-3 text-white font-semibold rounded-lg hover:opacity-90 transition-all"
+                  disabled={loading}
+                  className="w-full py-3 text-white font-semibold rounded-lg hover:opacity-90 disabled:opacity-60 transition-all"
                   style={{ background: '#4f46e5' }}
                 >
-                  Reset password
+                  {loading ? 'Sending...' : 'Reset password'}
                 </button>
               </form>
             </div>

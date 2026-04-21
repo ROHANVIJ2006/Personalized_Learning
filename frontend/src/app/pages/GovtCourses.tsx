@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'motion/react';
-import { GraduationCap, Star, Users, Clock, ExternalLink, Award } from 'lucide-react';
+import { motion, AnimatePresence } from 'motion/react';
+import { GraduationCap, Star, Users, Clock, ExternalLink, Award, CheckCircle } from 'lucide-react';
 import { api } from '../../lib/api';
 
 export function GovtCourses() {
@@ -8,16 +8,36 @@ export function GovtCourses() {
   const [loading, setLoading] = useState(true);
   const [provider, setProvider] = useState<'all'|'NPTEL'|'Swayam'|'Infosys Springboard'>('all');
   const [enrolling, setEnrolling] = useState<number|null>(null);
+  const [enrolled, setEnrolled] = useState<Set<number>>(new Set());
+  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' } | null>(null);
 
   useEffect(() => {
     api.getCourses({ govt_only: true }).then(setCourses).catch(console.error).finally(() => setLoading(false));
   }, []);
 
-  const enroll = async (id: number, url?: string) => {
+  const showToast = (message: string, type: 'success' | 'error' = 'success') => {
+    setToast({ message, type });
+    setTimeout(() => setToast(null), 3000);
+  };
+
+  const enroll = async (id: number, title: string, url?: string) => {
     setEnrolling(id);
-    try { await api.enrollCourse(id); if (url) window.open(url,'_blank'); }
-    catch (e: any) { if (url) window.open(url,'_blank'); }
-    finally { setEnrolling(null); }
+    try {
+      await api.enrollCourse(id);
+      setEnrolled(prev => new Set(prev).add(id));
+      showToast(`Enrolled in "${title}" ✓`, 'success');
+      if (url) window.open(url, '_blank');
+    } catch (e: any) {
+      if (e.message?.includes('Already enrolled')) {
+        setEnrolled(prev => new Set(prev).add(id));
+        showToast(`Already enrolled in "${title}"`, 'success');
+        if (url) window.open(url, '_blank');
+      } else {
+        showToast(e.message || 'Enrollment failed. Try again.', 'error');
+      }
+    } finally {
+      setEnrolling(null);
+    }
   };
 
   const filtered = courses.filter(c => provider === 'all' || c.provider === provider);
@@ -30,7 +50,25 @@ export function GovtCourses() {
   );
 
   return (
-    <div className="px-8 py-5 max-w-[1400px] mx-auto h-[calc(100vh-80px)] overflow-y-auto">
+    <div className="px-8 py-5 max-w-[1400px] mx-auto h-[calc(100vh-80px)] overflow-y-auto relative">
+      {/* Toast */}
+      <AnimatePresence>
+        {toast && (
+          <motion.div
+            key="toast"
+            initial={{ opacity: 0, y: -20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className={`fixed top-5 right-5 z-50 px-5 py-3 rounded-xl shadow-lg text-sm font-semibold flex items-center gap-2 ${
+              toast.type === 'success' ? 'bg-green-600 text-white' : 'bg-red-600 text-white'
+            }`}
+          >
+            <CheckCircle size={16} />
+            {toast.message}
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <motion.div initial={{ opacity:0, y:-20 }} animate={{ opacity:1, y:0 }}
         className="bg-gradient-to-r from-indigo-600 to-blue-600 rounded-xl p-5 text-white mb-5 shadow-lg">
@@ -40,7 +78,7 @@ export function GovtCourses() {
           </div>
           <div>
             <h1 className="text-xl font-bold">Government Certified Courses</h1>
-            <p className="text-indigo-100 text-sm mt-0.5">NPTEL · Swayam · Infosys Springboard — Free & officially certified</p>
+            <p className="text-indigo-100 text-sm mt-0.5">NPTEL · Swayam · Infosys Springboard — Free &amp; officially certified</p>
           </div>
         </div>
       </motion.div>
@@ -89,10 +127,20 @@ export function GovtCourses() {
             {course.start_date && (
               <p className="text-xs text-indigo-600 font-semibold mb-3">Starts: {course.start_date}</p>
             )}
-            <button onClick={() => enroll(course.id, course.url)} disabled={enrolling === course.id}
-              className="w-full py-2 bg-indigo-600 text-white text-sm font-semibold rounded-lg hover:bg-indigo-700 disabled:opacity-50 transition-colors flex items-center justify-center gap-2">
-              {enrolling === course.id ? 'Enrolling...' : 'Enroll Free'}
-              <ExternalLink size={13} />
+            <button
+              onClick={() => enroll(course.id, course.title, course.url)}
+              disabled={enrolling === course.id}
+              className={`w-full py-2 text-sm font-semibold rounded-lg transition-colors flex items-center justify-center gap-2 ${
+                enrolled.has(course.id)
+                  ? 'bg-green-600 hover:bg-green-700 text-white'
+                  : 'bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50'
+              }`}
+            >
+              {enrolling === course.id
+                ? 'Enrolling...'
+                : enrolled.has(course.id)
+                  ? <><CheckCircle size={14} /> Enrolled!</>
+                  : <>Enroll Free <ExternalLink size={13} /></>}
             </button>
           </motion.div>
         ))}
